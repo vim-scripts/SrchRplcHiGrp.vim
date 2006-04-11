@@ -1,8 +1,8 @@
 " SrchRplcHiGrp.vim  - Search and Replace based on a highlight group
 "
-" Version:	    0.15
+" Version:	    2.0
 " Author:	    David Fishburn <fishburn@ianywhere.com>
-" Last Changed: Fri Jan 09 2004 11:21:21 PM
+" Last Changed: Tue Apr 11 2006 10:33:09 PM
 " Created:	    Tue Dec 02 2003 10:11:07 PM
 " Description:  Search and Replace based on a syntax highlight group
 " Script:	    http://www.vim.org/script.php?script_id=848
@@ -37,15 +37,25 @@ function! <SID>SRWarningMsg(msg)  "{{{
 endfunction  "}}}  
 
 " SRDispHiGrp:
-function! <SID>SRDispHiGrp()  "{{{  
+" Echos the currently selected highlight group name to the screen.
+" If a parameter is supplied, it will display the message in the
+" colour of the group name.
+function! <SID>SRDispHiGrp(...)  "{{{  
     if s:srhg_group_id != 0
 	 	if s:srhg_group_id < 0
-			let gid= -s:srhg_group_id
+			let gid = -s:srhg_group_id
 		else
-			let gid=  s:srhg_group_id
+			let gid =  s:srhg_group_id
 		endif
+
+        if a:0 > 0 && strlen(a:1) > 0
+            let msg = a:1
+        else
+            let msg = "SRHiGrp - Group ID: " .gid . "  Name: " . synIDattr(gid,"name")
+        endif
+
         exec 'echohl ' . synIDattr(gid, "name")
-        echomsg "SRHiGrp - Group ID: " .gid . "  Name: " . synIDattr(gid,"name")
+        exec "echomsg '" . msg . "'"
         echohl None
     else
         echo "No highlight group has been choosen yet"
@@ -53,6 +63,9 @@ function! <SID>SRDispHiGrp()  "{{{
 endfunction  "}}}  
 
 " SRChooseHiGrp:
+" Sets the script variable s:srhg_group_id to the value
+" of the highlight group underneath the current cursor
+" position.
 function! <SID>SRChooseHiGrp(use_top_level)  "{{{  
     if(a:use_top_level == 1)
         let cursynid = -synID(line("."),col("."),1) 
@@ -71,7 +84,35 @@ function! <SID>SRChooseHiGrp(use_top_level)  "{{{
     endif
 endfunction  "}}}  
 
+" SRSetVisualRange:
+" Redefines the visual range if the user called the functions
+" with 1,5SR*
+function! <SID>SRSetVisualRange()  "{{{  
+    " If the current line position is not at the beginning
+    " or the end of the visual region
+    if line(".") != line("'<") && line(".") != line("'>") 
+        " Visually select the rows to ensure the correct
+        " range is operated on.
+        " This handles the case that SRHiGrp was run as:
+        "   :SRHiGrp
+        "   :1,5SRHiGrp
+        " instead of:
+        "   :'<,'>SRHiGrp
+
+        exec 'normal! '.s:srhg_firstline."GV"
+        if s:srhg_lastline > s:srhg_firstline
+            exec "normal! " . 
+                        \ (s:srhg_lastline - s:srhg_firstline) . 
+                        \ "j"
+        endif
+        exec "normal! \<Esc>"
+    endif
+    return 1
+endfunction  "}}}  
+
 " SRPositionWord:
+" Places the cursor on the next match following the 
+" previous line and column passed in.
 function! <SID>SRPositionWord( prvline, prvcol)  "{{{  
     let prvline = a:prvline
     let prvcol  = a:prvcol
@@ -80,34 +121,18 @@ function! <SID>SRPositionWord( prvline, prvcol)  "{{{
     " echo 'Visual Mode:'. visualmode()
 
     if (prvline == 0) && (prvcol == 0)
-        " If the current line position is not at the beginning
-        " or the end of the visual region
-        if line(".") != line("'<") && line(".") != line("'>") 
-            " Visually select the rows to ensure the correct
-            " range is operated on.
-            " This handles the case that SRHiGrp was run as:
-            "   :SRHiGrp
-            "   :1,5SRHiGrp
-            " instead of:
-            "   :'<,'>SRHiGrp
-
-            exec 'normal! '.s:srhg_firstline."GV"
-            if s:srhg_lastline > s:srhg_firstline
-                exec "normal! " . 
-                            \ (s:srhg_lastline - s:srhg_firstline) . 
-                            \ "j"
-            endif
-            exec "normal! \<Esc>"
-        endif
-        let leftcol  = col("'<") - 1
-        exe 'norm! '.s:srhg_firstline."G\<bar>".leftcol.(leftcol>0 ? 'l' : '' )
+        call s:SRSetVisualRange(prvline, prvcol)
+        " let leftcol  = col("'<") - 1
+        " exe 'norm! '.s:srhg_firstline."G\<bar>".leftcol.(leftcol>0 ? 'l' : '' )
+        call cursor(s:srhg_firstline,leftcol)
         return 1
     endif
 
     while 1==1
         if visualmode() == 'v'
             if line(".") == s:srhg_firstline
-                let leftcol  = col("'<") - 1
+                " let leftcol  = col("'<") - 1
+                let leftcol  = col("'<")
             else
                 let leftcol  = 1
             endif
@@ -117,11 +142,13 @@ function! <SID>SRPositionWord( prvline, prvcol)  "{{{
                 let rightcol  = col("$")
             endif
         elseif visualmode() == 'V'
-            let leftcol  = 0
+            " let leftcol  = 0
+            let leftcol  = 1
             let rightcol = col("$")
         elseif visualmode() == "\<C-V>"
-            let leftcol  = col("'<") - 1
-            let rightcol  = col("'>")
+            " let leftcol  = col("'<") - 1
+            let leftcol  = col("'<")
+            let rightcol = col("'>")
         endif
 
         " echo 'PrvLine:'.prvline.' prvcol:'.prvcol.
@@ -131,7 +158,8 @@ function! <SID>SRPositionWord( prvline, prvcol)  "{{{
         " Position cursor on leftcol
         " on each new line based on visual mode
         if col(".") < leftcol
-            exe 'norm! '.line(".")."G\<bar>".leftcol.(leftcol>0 ? 'l' : '' )
+            " exe 'norm! '.line(".")."G\<bar>".leftcol.(leftcol>0 ? 'l' : '' )
+            call cursor(line("."),leftcol)
         else
             normal! w
         endif
@@ -151,7 +179,8 @@ function! <SID>SRPositionWord( prvline, prvcol)  "{{{
             let prvline = prvline + 1
             " Position the cursor on the next line and move 
             " to the start of the visual region
-            exe 'norm! '.prvline."G\<bar>".leftcol.(leftcol>0 ? 'l' : '' )
+            " exe 'norm! '.prvline."G\<bar>".leftcol.(leftcol>0 ? 'l' : '' )
+            call cursor(prvline,leftcol)
             break
         elseif col(".") < leftcol && line(".") <= s:srhg_lastline
             " outside of visual area, move to next word
@@ -165,6 +194,8 @@ function! <SID>SRPositionWord( prvline, prvcol)  "{{{
 endfunction  "}}}  
 
 " SRHiGrp:
+" Traverses the region selected and performs all search and
+" replaces over the region for the selected highlight group.
 function! <SID>SRHiGrp(...) range   "{{{  
 
     let s:srhg_firstline = a:firstline
@@ -180,6 +211,8 @@ function! <SID>SRHiGrp(...) range   "{{{
                     \ )
         return
     endif
+
+    let group_name = synIDattr(s:srhg_group_id, 'name')
 
     if(a:0 > 0) 
         if( a:1 == 0 || a:1 == 1)
@@ -235,14 +268,16 @@ function! <SID>SRHiGrp(...) range   "{{{
     endif
 
     " let higrpid    = synIDtrans(hlID(s:srhg_group_id))
-    let lastline   = line("$")
-    let curcol     = 0
-    let curline    = line(".")
-    let fenkeep    = &fen
-    let saveSearch = @/
+    let lastline       = line("$")
+    let found          = 0
+    let curcol         = 0
+    let curline        = line(".")
+    let fenkeep        = &fen
+    let saveSearch     = @/
+    let saveFoldEnable = &foldenable
     set nofoldenable
 
-    if s:SRPositionWord(0,0) == -1
+    if s:SRPositionWord( curline, curcol ) == -1
         call s:SRWarningMsg( 
                     \ 'Please reselect the visual area (ie gv)'
                     \ )
@@ -271,14 +306,18 @@ function! <SID>SRHiGrp(...) range   "{{{
                 exec 's/\%#'.match_exp.'/'.replace_exp.'/e'
                 " Since this command can move the cursor, put the cursor
                 " back to its original position
-                exe 'norm! '.curline."G\<bar>".(curcol-1)."l"
+                " exe 'norm! '.curline."G\<bar>".(curcol-1)."l"
+                call cursor(curline,curcol)
+                let found = 1
             elseif match_group == 0 && cursynid != gid
                 " Perform the subtitution, but do not report an error
                 " if the match fails
                 exec 's/\%#'.match_exp.'/'.replace_exp.'/e'
                 " Since this command can move the cursor, put the cursor
                 " back to its original position
-                exe 'norm! '.curline."G\<bar>".(curcol-1)."l"
+                " exe 'norm! '.curline."G\<bar>".(curcol-1)."l"
+                call cursor(curline,curcol)
+                let found = 1
             endif
         endif
 
@@ -290,11 +329,124 @@ function! <SID>SRHiGrp(...) range   "{{{
 
     endwhile
 
+    if found == 0
+        call s:SRWarningMsg('Did not find highlight group: "'.group_name.'"')
+    endif
+
     " cleanup
-    let &fen= fenkeep
+    let &fen = fenkeep
     if foldlevel(".") > 0
         norm! zO
     endif
+    let &foldenable = saveFoldEnable
+    unlet curcol
+    " unlet higrpid
+    unlet lastline
+    let @/ = saveSearch
+    if exists("prvcol")
+        unlet prvcol
+    endif
+endfunction  "}}}  
+
+" SRSearch:
+" Finds the next occurrence of the highlight group within
+" the range selected from the current cursor position.
+function! <SID>SRSearch(fline, lline, ...) "{{{  
+
+    let s:srhg_firstline = a:fline
+    let s:srhg_lastline  = a:lline
+
+    if a:0 > 0 && strlen(a:1) > 0
+        let s:srhg_group_id = -hlID(a:1)
+        let group_name      = a:1
+    else
+        let group_name      = synIDattr(-s:srhg_group_id, 'name')
+    endif
+
+    if s:srhg_group_id == 0
+        call s:SRWarningMsg( 
+                    \ 'You must specify a syntax group name ' .
+                    \ 'on the command line (<Tab> to complete) ' .
+                    \ 'or by placing the cursor on a character ' .
+                    \ 'that is highlighted the way you want ' .
+                    \ 'and execute :SRChooseHiGrp or ' . 
+                    \ ':SRChooseHiGrp!'  
+                    \ )
+        return
+    endif
+
+    " let higrpid    = synIDtrans(hlID(s:srhg_group_id))
+    let lastline       = line("$")
+    let found          = 0
+    let orgline        = line(".")
+    let orgcol         = col(".")
+    let curline        = line(".")
+    let curcol         = col(".")
+    let fenkeep        = &fen
+    let saveSearch     = @/
+    let saveFoldEnable = &foldenable
+    set nofoldenable
+
+    " Reset visual range if necessary
+    call s:SRSetVisualRange()
+
+    " Restore the cursor position since resetting
+    " the visual area could have moved the cursor
+    call cursor(orgline, orgcol)
+
+    if s:SRPositionWord(orgline,orgcol) == -1
+        call s:SRWarningMsg( 
+                    \ 'Please reselect the visual area (ie gv)'
+                    \ )
+        return
+    endif
+
+	let gid = s:srhg_group_id
+	if(gid < 0)
+		let gid = -s:srhg_group_id
+	endif
+
+    while line(".") <= s:srhg_lastline
+        let curcol   = col(".")
+        let curline  = line(".")
+        let cursynid = (s:srhg_group_id < 0) ?
+                    \ -synID(line("."),col("."),1) :
+                    \ synIDtrans(synID(line("."),col("."),1)) 
+        let cursynid = (s:srhg_group_id < 0) ? synID(line("."),col("."),1) : synIDtrans(synID(line("."),col("."),1)) 
+        " Useful debugging statement:
+        " echo col(".").':'.getline(".")[col(".")-1].':'.cursynid.':'.getline(".")
+
+        if line(".") == curline 
+            if cursynid == gid
+                call s:SRDispHiGrp( "SRSearch - Match found - Group ID: " .
+                            \ gid . "  Name: " . synIDattr(gid,"name")
+                            \ )
+                let found = 1
+                break
+            endif
+        endif
+
+        let prvcol  = curcol
+        let prvline = curline
+        if s:SRPositionWord(prvline, prvcol) == -1
+            break
+        endif
+
+    endwhile
+
+    if found == 0
+        call s:SRDispHiGrp( "SRSearch - Match NOT found - Group ID: " .
+                    \ gid . "  Name: " . synIDattr(gid,"name")
+                    \ )
+        call cursor(orgline, orgcol)
+    endif
+
+    " cleanup
+    let &fen = fenkeep
+    if foldlevel(".") > 0
+        norm! zO
+    endif
+    let &foldenable = saveFoldEnable
     unlet curcol
     " unlet higrpid
     unlet lastline
@@ -310,6 +462,7 @@ endfunction  "}}}
 command! -range -bang -nargs=* SRHiGrp       <line1>,<line2>call s:SRHiGrp(<bang>1,<args>)
 command!        -bang -nargs=0 SRChooseHiGrp :call s:SRChooseHiGrp(<bang>1)
 command!              -nargs=0 SRDispHiGrp   :call s:SRDispHiGrp()
+command! -range=% -nargs=? -complete=highlight    SRSearch      call s:SRSearch(<line1>,<line2>,<q-args>)
 "}}}  
 
 " vim:fdm=marker:nowrap:ts=4:
