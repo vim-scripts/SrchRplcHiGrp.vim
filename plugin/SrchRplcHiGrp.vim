@@ -1,8 +1,8 @@
 " SrchRplcHiGrp.vim  - Search and Replace based on a highlight group
 "
-" Version:	    4.0
-" Author:	    David Fishburn <fishburn@ianywhere.com>
-" Last Changed: Mon 21 Jan 2008 06:17:14 PM Eastern Standard Time
+" Version:	    5.0
+" Author:	    David Fishburn <dfishburn dot vim at gmail dot com>
+" Last Changed: 2011 Jan 01
 " Created:	    Tue Dec 02 2003 10:11:07 PM
 " Description:  Search and Replace based on a syntax highlight group
 " Script:	    http://www.vim.org/script.php?script_id=848
@@ -20,7 +20,7 @@
 if exists('g:loaded_srhg') || &cp || !exists("syntax_on")
 	finish
 endif
-let g:loaded_srhg = 1
+let g:loaded_srhg = 5
 
 " Default the highlight group to 0
 let s:srhg_group_id  = 0
@@ -427,16 +427,20 @@ function! <SID>SRSearch(fline, lline, ...) "{{{
 	endif
 
     while line(".") <= s:srhg_lastline
-        let curcol   = col(".")
-        let curline  = line(".")
-        let cursynid = (s:srhg_group_id < 0) ?
-                    \ -synID(line("."),col("."),1) :
-                    \ synIDtrans(synID(line("."),col("."),1)) 
-        let cursynid = (s:srhg_group_id < 0) ? synID(line("."),col("."),1) : synIDtrans(synID(line("."),col("."),1)) 
+        let curcol    = col(".")
+        let curline   = line(".")
+        let cursynid  = (s:srhg_group_id < 0) ? synID(line("."),col("."),1) : synIDtrans(synID(line("."),col("."),1)) 
+        let prevsynid = (s:srhg_group_id < 0) ? synID(line("."),(col(".")-1),1) : synIDtrans(synID(line("."),(col(".")-1),1)) 
         " Useful debugging statement:
         " echo col(".").':'.getline(".")[col(".")-1].':'.cursynid.':'.getline(".")
 
-        if line(".") == curline 
+        " if line(".") == curline 
+        " Check the current syn id against the previous columns syn id.
+        " If they are the same, assume we are still part of the same "string"
+        " and we need to continue searching until we find a gap between the 
+        " highlight groups indicating we are actually on our next match
+        " (Sergio).
+        if line(".") == curline && (cursynid != prevsynid)
             if cursynid == gid
                 call s:SRDispHiGrp( "SRSearch - Match found - Group ID: " .
                             \ gid . "  Name: " . synIDattr(gid,"name")

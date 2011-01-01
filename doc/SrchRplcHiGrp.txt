@@ -1,6 +1,6 @@
 *SrchRplcHiGrp.txt* Search and Replace Restricted to a Highlighting Group
 
-Author: David Fishburn					January 22, 2008
+Author: David Fishburn					January 1, 2011
 
 
 ==============================================================================
@@ -80,6 +80,10 @@ Author: David Fishburn					January 22, 2008
                 selected via SRChooseHiGrp and begin the search.  If no valid
                 group name was specified, an error message will be reported.
 
+                Running SRSearch a second time will ensure the cursor is
+                positioned on the next separate highlight matched text.
+                There must be a gap between the two groups.
+
 	SRHiGrp[!] 	       			      	*SRHiGrp*
                 This command will perform a search and replace over a visual
                 range.  It works in all visual modes, characterwise (v),
@@ -114,9 +118,15 @@ Author: David Fishburn					January 22, 2008
    -------
 
 	First place your cursor on an item that is syntax colored the way
-	you want:
+	you want.  Notice the command takes an optional !.  If your first 
+        search and replace doesn't work, you can undo the change and reselect 
+        the group using the ! and try again.
 >
 		:SRChooseHiGrp
+                SRHiGrp - Group ID: 562  Name: sqlStatement
+                or
+		:SRChooseHiGrp!
+                SRHiGrp - Group ID: 51  Name: Statement
 < 
 	Next, visually select a block of text
 	(all visual modes are supported)
@@ -141,7 +151,7 @@ Author: David Fishburn					January 22, 2008
 	highlighted yellow (based on my colorscheme).  After I visually
 	select the area and run the command taking default prompts:
 >
-		:'<,'>SRHiGrp 
+		:'<,'>SRHiGrp  
 <
 	The result is:
 >
