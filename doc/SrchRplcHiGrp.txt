@@ -1,6 +1,6 @@
 *SrchRplcHiGrp.txt* Search and Replace Restricted to a Highlighting Group
 
-Author: David Fishburn					January 1, 2011
+Author: David Fishburn					May 7, 2015
 
 
 ==============================================================================
@@ -13,50 +13,67 @@ Author: David Fishburn					January 1, 2011
 	   SRChooseHiGrp.................: |SRChooseHiGrp|
 	   SRHiGrp.......................: |SRHiGrp|
 	3. Examples......................: |srchrplchigrp-examples|
+	4. History.......................: |srchrplchigrp-history|
 
 
 ==============================================================================
 2. Commands					*srchrplchigrp-commands*
 
 	SR = Search and Replace			*SR*
- 
+
 	SRDispHiGrp				*SRDispHiGrp*
-		Displays the syntax id and name the of the syntax group 
+		Displays the syntax id and name the of the syntax group
 		which has been chosen.
 
-	SRChooseHiGrp[!]       			*SRChooseHiGrp*
+	SRChooseHiGrp[!][id]       			*SRChooseHiGrp*
                 Before you can run the search and replace command (:SRHiGrp),
-                you must choose which syntax group id you want to operate on.  
+                you must choose which syntax group id you want to operate on.
                 The top level syntax id of the current cursor position is
                 chosen (ie. the top-level one versus the final one).
 
                 The optional bang lets SRChooseHiGrp use the translated
-                syntax ID. This is final one versus the top-level one. 
+                syntax ID. This is final one versus the top-level one.
 
-                Assuming we were using a SQL file and placed the cursor on the
-                FROM word, then using the SyntaxAttr plugin
-                (http://vim.sourceforge.net/script.php?script_id=383)
-                it displays both the top-level and translated 
-                (or final) highlight group as follows: >
-                  group: sqlKeyword->Statement guifg=#ffff00(#ffff00) 
-<
+                Assuming we were using a SQL file and placed the cursor on any
+                word in a Comment section.  Typically SQL comments can use any
+                of these formats:
+                   -- This is a comment
+
+                   // This is also a comment
+
+                   /*
+                    * This is a multi
+                    * line comment
+                    */
+
 
 		Examples: >
-		  :SRChooseHiGrp 
-<                     Will operate on only sqlKeyword syntax groups
+		  :SRChooseHiGrp
+<                     SRHiGrp - Group ID: 497  Name: sqlDashComment
+
+                     Will operate on only sqlDashComment syntax groups
 >
-		  :SRChooseHiGrp! 
-<                     Will operate on all Statement syntax groups.  Based on
-                      |group-name|, the Statement group will highlight the
-                      same color for the following highlight groups:
-                            Conditional	
-                            Repeat		
-                            Label		
-                            Operator	
-                            Keyword	
-                            Exception	
-                      Therefore SRChooseHiGrp! will operate over all of the
-                      above syntax groups.
+		  :SRChooseHiGrp!
+<                     SRHiGrp - Group ID: 46  Name: Comment
+
+                     Will operate on all Comment syntax groups.  Looking
+                     at the syntax file for this we see: >
+                           hi def link sqlDashComment	Comment
+                           hi def link sqlSlashComment	Comment
+                           hi def link sqlMultiComment	Comment
+<
+                     Therefore SRChooseHiGrp! will operate over all of the
+                     above syntax groups: >
+                           sqlDashComment
+                           sqlSlashComment
+                           sqlMultiComment
+>
+		  :SRChooseHiGrp 46
+<                     SRHiGrp - Group ID: 46  Name: Comment
+
+                     Instead of choosing the syntax group the cursor is on
+                     this allows you to programmatically choose the exact
+                     group id you want.
 
 	SRSearch    	       			      	*SRSearch*
                 This command will perform a forward search starting at the current
@@ -85,9 +102,9 @@ Author: David Fishburn					January 1, 2011
                 There must be a gap between the two groups.
 
 	SRHiGrp[!] 	       			      	*SRHiGrp*
-                This command will perform a search and replace over a visual
-                range.  It works in all visual modes, characterwise (v),
-                linewise (V) and blockwise (<C-V>).
+                This command will perform a search and replace over a range.
+                The range defaults to the entire file.  It works in all visual
+                modes, characterwise (v), linewise (V) and blockwise (<C-V>).
 
 		It optionally takes takes 2 parameters.
 
@@ -98,7 +115,7 @@ Author: David Fishburn					January 1, 2011
 
 		Parameter 2 controls what to do with the matched string.  The
 		default for this value is \U\1.  This expression will cause
-		the matched string to be UPPER cased.  The \1 refers to the 
+		the matched string to be UPPER cased.  The \1 refers to the
                 submatch from the first parameter.
 
 		If the parameters are not supplied, the user will be prompted
@@ -118,8 +135,8 @@ Author: David Fishburn					January 1, 2011
    -------
 
 	First place your cursor on an item that is syntax colored the way
-	you want.  Notice the command takes an optional !.  If your first 
-        search and replace doesn't work, you can undo the change and reselect 
+	you want.  Notice the command takes an optional !.  If your first
+        search and replace doesn't work, you can undo the change and reselect
         the group using the ! and try again.
 >
 		:SRChooseHiGrp
@@ -127,7 +144,7 @@ Author: David Fishburn					January 1, 2011
                 or
 		:SRChooseHiGrp!
                 SRHiGrp - Group ID: 51  Name: Statement
-< 
+<
 	Next, visually select a block of text
 	(all visual modes are supported)
 >
@@ -147,11 +164,11 @@ Author: David Fishburn					January 1, 2011
 		    drop procedure sp_http_course_detail;
 		end if;
 <
-	Where the keywords (if, exists, select, from ...) are all 
+	Where the keywords (if, exists, select, from ...) are all
 	highlighted yellow (based on my colorscheme).  After I visually
 	select the area and run the command taking default prompts:
 >
-		:'<,'>SRHiGrp  
+		:'<,'>SRHiGrp
 <
 	The result is:
 >
@@ -163,7 +180,7 @@ Author: David Fishburn					January 1, 2011
 		    DROP PROCEDURE sp_http_course_detail;
 		END IF;
 <
-	Where the keywords (if, exists, select, from ...) are all 
+	Where the keywords (if, exists, select, from ...) are all
 	highlighted yellow (based on my colorscheme).  After I visually
 	select the area and run the command taking default prompts: >
 
@@ -177,7 +194,7 @@ Author: David Fishburn					January 1, 2011
 		           where SP.PROC_NAME = 'SP_HTTP_COURSE_DETAIL'
 		             and SUP.USER_NAME = USER_NAME()             ) then
 		    drop procedure SP_HTTP_COURSE_DETAIL;
-		end if; 
+		end if;
 <
 
    SRSearch
@@ -188,7 +205,7 @@ Author: David Fishburn					January 1, 2011
 		:SRSearch sqlKeyword
 		:1,5SRSearch sqlKeyword
 		:'<,'>SRSearch sqlKeyword
-< 
+<
 	Optionally, you can first choose the hightlight group by placing your
         cursor on the highlight you want and: >
 		:SRChooseHiGrp
@@ -206,4 +223,16 @@ Author: David Fishburn					January 1, 2011
             SRSearch - Match found - Group ID: 171  Name: sqlKeyword
             SRSearch - Match NOT found - Group ID: 171  Name: sqlKeyword
 <
+==============================================================================
+4. History					*srchrplchigrp-history*
+
+   Version 6 (July 27, 2015)
+        - Changed to save and restore cp options on load
+        - Changed to use Vim's autoload mechanism to load only when
+          required (speeds Vim's load time and memory usage)
+        - When using SRHiGrp! (operate over non-matching areas) the plugin
+          always reported "Did not find highlight group" (Mathieu Westphal)
+        - SRHiGrp now defaults the range to the entire file, instead of the
+          current row
+
 vim:tw=78:ts=8:ft=help:norl:
