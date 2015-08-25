@@ -1,6 +1,6 @@
 *SrchRplcHiGrp.txt* Search and Replace Restricted to a Highlighting Group
 
-Author: David Fishburn					May 7, 2015
+Author: David Fishburn					August 25, 2015
 
 
 ==============================================================================
@@ -75,28 +75,25 @@ Author: David Fishburn					May 7, 2015
                      this allows you to programmatically choose the exact
                      group id you want.
 
-	SRSearch    	       			      	*SRSearch*
+	SRSearch[!]    	       			      	*SRSearch*
                 This command will perform a forward search starting at the current
-                cursor position for a specified highlight group name.  The range defaults
-                to the entire file.  It supports all visual modes, characterwise (v),
-                linewise (V) and blockwise (<C-V>).
-
-		It optionally takes takes one parameter.  You can supply a hightlight
-                group name: >
-                    :SRSearch Statement
+                cursor position for text in the specified highlight group
+                name.  The range defaults to the entire file.  It supports all
+                visual modes, characterwise (v), linewise (V) and blockwise
+                (<C-V>).  First choose a highlight group using SRChooseHiGrp.
+                Providing no arguments will search until it finds text
+                highlighted in that syntax.  >
+                    :SRSearch 
 <
-                The command supports highlight group name completion. >
-                    :SRSearch C<Tab>
-<               Depending on which syntax groups are defined (given your filetype and
-                various plugins) this will cycle through all highlight group names
-                beginning with the letter 'C'.
-
-                Alternatively, you can use the SRChooseHiGrp or SRChooseHiGrp!
-                command to select the highlight group.  Running SRSearch
-                without a parameter will check if a valid group name was
-                selected via SRChooseHiGrp and begin the search.  If no valid
-                group name was specified, an error message will be reported.
-
+                Using the bang (!) it will search for the next text that is
+                not using the syntax group: >
+                    :SRSearch!
+<
+		It optionally takes takes a regex parameter.  You can supply a hightlight
+                group name: >
+                    :SRSearch some text
+                    :SRSearch \(first\|second\|word\)
+<
                 Running SRSearch a second time will ensure the cursor is
                 positioned on the next separate highlight matched text.
                 There must be a gap between the two groups.
@@ -201,30 +198,49 @@ Author: David Fishburn					May 7, 2015
    --------
 
 	SRSearch simply does a forward search for the specified highlight
-        group.  A few examples: >
-		:SRSearch sqlKeyword
-		:1,5SRSearch sqlKeyword
-		:'<,'>SRSearch sqlKeyword
+        group.  You must first use SRChooseHiGrp to choose a highlight group.
+        Find the next item highlighted as that syntax group: >
+		:SRSearch 
+		:1,5SRSearch 
+		:'<,'>SRSearch 
 <
-	Optionally, you can first choose the hightlight group by placing your
-        cursor on the highlight you want and: >
-		:SRChooseHiGrp
-		:SRSearch
+        Find the next item highlighted that is NOT that syntax group: >
+		:SRSearch!
+		:1,5SRSearch! 
+		:'<,'>SRSearch! 
 <
-	Using Vim's tab completion you can also: >
-		:SRSearch s<Tab>
+        Find the next item highlighted as that syntax group and matches
+        the regular expression supplied: >
+		:SRSearch something
+		:SRSearch \(first\|second\|word\)
 <
-	Each time you press tab, it will cycle through the currently defined
-        syntax highlight groups beginning with the letter 's'.
-
+        Find the next item highlighted that is NOT that syntax group and 
+        matches the regular expression supplied: >
+		:SRSearch! \(first\|second\|word\)
+<
         The results of the search is displayed in the command line and is
         highlighted in the color of the syntax group.  This will remind you
         which group was searched for. >
             SRSearch - Match found - Group ID: 171  Name: sqlKeyword
             SRSearch - Match NOT found - Group ID: 171  Name: sqlKeyword
+            SRSearch - Match found - Group ID: 171  Name: sqlKeyword  Regex: \(first\|second\|word\)
+            SRSearch - Match NOT found - Group ID: 171  Name: sqlKeyword  Regex \(first\|second\|word\)
 <
 ==============================================================================
 4. History					*srchrplchigrp-history*
+
+   Version 7 (August 25, 2015)
+        - Changed SRSeach.  It will first look for the next item that has
+          the syntax group chosen via SRChooseHiGrp.  
+          It will also take an optional regular expression and not only find
+          that syntax group, but also match the regular expression.
+          Added SRSearch!, which will find the next item that is NOT what
+          was chosen via SRChooseHiGrp.  Same applied with the regular
+          expression, so if I put my cursor on a comment and :SRChooseHiGrp.
+          Then ran :SRSearch! something, it will find the word "something"
+          that is NOT in a comment.
+
+
 
    Version 6 (July 27, 2015)
         - Changed to save and restore cp options on load

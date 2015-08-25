@@ -73,11 +73,16 @@ Commands:
 		[range]SRHiGrp[!] 'from-pattern','to-string'
 
  
-	SRSearch    	       			      	
+	SRSearch[!]  	       			      	
                 This command will perform a forward search starting at the current
                 cursor position for a specified highlight group name.  The range defaults
                 to the entire file.  It supports all visual modes, characterwise (v),
                 linewise (V) and blockwise (<C-V>).
+
+                It will optionally take a regular expression and match on both the syntax
+                group and the regular expression.
+
+                When using SRSearch! it NOT match the syntax group.
 
 ==============================================================================
 3. Examples					*srchrplchigrp-examples*
@@ -138,26 +143,32 @@ Commands:
    SRSearch
    --------------
 	SRSearch simply does a forward search for the specified highlight
-        group.  A few examples: 
-		:SRSearch sqlKeyword
-		:1,5SRSearch sqlKeyword
-		:'<,'>SRSearch sqlKeyword
-
-	Optionally, you can first choose the hightlight group by placing your
-        cursor on the highlight you want and: 
-		:SRChooseHiGrp
-		:SRSearch
-
-	Using Vim's tab completion you can also: 
-		:SRSearch s<Tab>
-
-	Each time you press tab, it will cycle through the currently defined
-        syntax highlight groups beginning with the letter 's'.
-
+        group.  You must first use SRChooseHiGrp to choose a highlight group.
+        Find the next item highlighted as that syntax group:  
+		:SRSearch 
+		:1,5SRSearch 
+		:'<,'>SRSearch 
+ 
+        Find the next item highlighted that is NOT that syntax group: 
+		:SRSearch!
+		:1,5SRSearch! 
+		:'<,'>SRSearch! 
+ 
+        Find the next item highlighted as that syntax group and matches
+        the regular expression supplied: 
+		:SRSearch something
+		:SRSearch \(first\|second\|word\)
+ 
+        Find the next item highlighted that is NOT that syntax group and 
+        matches the regular expression supplied: 
+		:SRSearch! \(first\|second\|word\)
+ 
         The results of the search is displayed in the command line and is
         highlighted in the color of the syntax group.  This will remind you
         which group was searched for. 
             SRSearch - Match found - Group ID: 171  Name: sqlKeyword
             SRSearch - Match NOT found - Group ID: 171  Name: sqlKeyword
+            SRSearch - Match found - Group ID: 171  Name: sqlKeyword  Regex: \(first\|second\|word\)
+            SRSearch - Match NOT found - Group ID: 171  Name: sqlKeyword  Regex \(first\|second\|word\)
 
 

@@ -1,8 +1,8 @@
 " SrchRplcHiGrp.vim  - Search and Replace based on a highlight group
 "
-" Version:	6.0
+" Version:	7.0
 " Author:	David Fishburn <dfishburn dot vim at gmail dot com>
-" Last Changed: 2015 Jul 27
+" Last Changed: 2015 Aug 25
 " Created:	Tue Dec 02 2003 10:11:07 PM
 " Description:  Search and Replace based on a syntax highlight group
 " Script:	http://www.vim.org/script.php?script_id=848
@@ -20,7 +20,7 @@
 if exists('g:loaded_srhg_auto') || !exists("syntax_on") || &cp
 	finish
 endif
-let g:loaded_srhg_auto = 6
+let g:loaded_srhg_auto = 7
 
 " Turn on support for line continuations when creating the script
 let s:cpo_save = &cpo
@@ -261,28 +261,35 @@ endfunction  "}}}
 " SRSearch:
 " Finds the next occurrence of the highlight group within
 " the range selected from the current cursor position.
-function! SrchRplcHiGrp#SRSearch(fline, lline, ...) "{{{
+function! SrchRplcHiGrp#SRSearch(anti, fline, lline, ...) "{{{
+    if s:srhg_group_id == 0
+        call s:SRWarningMsg(
+                    \ 'You must use SRChooseHiGrp to specify a syntax group name first'
+                    \ )
+        return
+    endif
 
+    let match_group      = a:anti
     let s:srhg_firstline = a:fline
     let s:srhg_lastline  = a:lline
 
-    if a:0 > 0 && strlen(a:1) > 0
-        let s:srhg_group_id = -hlID(a:1)
-        let group_name      = a:1
-    else
-        let group_name      = synIDattr(-s:srhg_group_id, 'name')
-    endif
+    let group_name       = synIDattr(-s:srhg_group_id, 'name')
+    let regex            = ""
 
-    if s:srhg_group_id == 0
-        call s:SRWarningMsg(
-                    \ 'You must specify a syntax group name ' .
-                    \ 'on the command line (<Tab> to complete) ' .
-                    \ 'or by placing the cursor on a character ' .
-                    \ 'that is highlighted the way you want ' .
-                    \ 'and execute :SRChooseHiGrp or ' .
-                    \ ':SRChooseHiGrp!'
-                    \ )
-        return
+    if a:0 > 0 && strlen(a:1) > 0
+        " Escape special characters in the regex
+        " let regex = substitute(
+        "             \     substitute(
+        "             \         escape(a:1 '\\/.*$^~[]'),
+        "             \         "\n$",
+        "             \         "", 
+        "             \         ""
+        "             \     ),
+        "             \     "\n", 
+        "             \     '\\_[[:return:]]',
+        "             \     "g"
+        "             \ )
+        let regex = a:1
     endif
 
     " let higrpid    = synIDtrans(hlID(s:srhg_group_id))
@@ -335,12 +342,38 @@ function! SrchRplcHiGrp#SRSearch(fline, lline, ...) "{{{
         " highlight groups indicating we are actually on our next match
         " (Sergio).
         if line(".") == curline && (cursynid != prevsynid)
-            if cursynid == gid
-                call SrchRplcHiGrp#SRDispHiGrp( "SRSearch - Match found - Group ID: " .
-                            \ gid . "  Name: " . synIDattr(gid,"name")
-                            \ )
-                let found = 1
-                break
+            if cursynid == gid && match_group == 1
+                if regex != ""
+                    " Check if the expression matches
+                    if strpart(getline('.'), (curcol-1)) =~ regex
+                        let found = 1
+                    endif
+                else
+                    let found = 1
+                endif
+                if found == 1
+                    call SrchRplcHiGrp#SRDispHiGrp( "SRSearch - Match found - Group ID: " .
+                                \ gid . "  Name: " . synIDattr(gid,"name") .
+                                \ (regex == "" ? "" : '  Regex: '.regex)
+                                \ )
+                    break
+                endif
+            elseif cursynid != gid && match_group == 0
+                if regex != ""
+                    " Check if the expression matches
+                    if strpart(getline('.'), (curcol-1)) =~ regex
+                        let found = 1
+                    endif
+                else
+                    let found = 1
+                endif
+                if found == 1
+                    call SrchRplcHiGrp#SRDispHiGrp( "SRSearch - Match found - NOT Group ID: " .
+                                \ gid . "  Name: " . synIDattr(gid,"name") .
+                                \ (regex == "" ? "" : '  Regex: '.regex)
+                                \ )
+                    break
+                endif
             endif
         endif
 
@@ -485,6 +518,18 @@ function! <SID>SRPositionWord(prvline, prvcol, bfirsttime)  "{{{
     return 1
 endfunction  "}}}
 
+" If a comment is found, skip it
+function! <SID>SRCommentCheck( lineno, indx )  "{{{
+    if getline(a:lineno) =~ '^\s*--'
+        return 1
+    endif
+    return 0
+
+    let synid   = synID(a:lineno,a:indx+1,1)
+    let synname = synIDattr(synIDtrans(synid),"name")
+    let ret= (synname == "String")? 1 : 0
+    return ret
+endfunction  "}}}
 
 let &cpo = s:cpo_save
 unlet s:cpo_save
